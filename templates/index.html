@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plant Disease Detection</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .container {
+      max-width: 600px;
+    }
+    .card {
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .btn-primary {
+      width: 100%;
+    }
+    .image-preview {
+      max-height: 300px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="container mt-5">
+    <div class="card p-4">
+      <h2 class="text-center mb-4">🌱 Plant Disease Detection</h2>
+      
+      <form @submit.prevent="uploadImage">
+        <div class="form-group">
+          <label for="image">📸 Upload a plant leaf image:</label>
+          <input type="file" class="form-control-file" id="image" @change="handleFileUpload">
+        </div>
+        <button type="submit" class="btn btn-primary">🔍 Detect Disease</button>
+      </form>
+
+      <!-- Loading Spinner -->
+      <div v-if="loading" class="text-center mt-3">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">Processing...</span>
+        </div>
+      </div>
+
+      <!-- Results Section -->
+      <div v-if="result" class="mt-4 text-center">
+        <h4 class="font-weight-bold">🩺 Diagnosis:</h4>
+        <p><strong>🌿 Affected Area:</strong><span v-html="result.affected_area_percentage.toFixed(2)"></span></p>
+        <p><strong>🧬 Disease Index:</strong><span v-html="result.disease_index.toFixed(4)"></span></p>
+        <p><strong>🦠 Diseased Regions:</strong><span v-html="result.num_diseased_regions"></span></p>
+        <p><strong>Diseased Status:</strong> 
+          <span v-html="result.status"></span>
+          <span v-if="result.status === 'Healthy'"> ✅</span>
+          <span v-else> ⚠️</span>
+        </p>
+ 
+        <img :src="imageUrl" alt="Uploaded image" class="img-thumbnail image-preview mt-3" v-if="imageUrl">
+      </div>
+    </div>
+  </div>
+
+  <!-- Vue.js -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</ht

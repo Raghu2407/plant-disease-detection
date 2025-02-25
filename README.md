@@ -1,159 +1,164 @@
-# Plant Disease Detection Project
+# Plant Disease Detection
 
-## 1. Introduction
-Plant disease detection is an essential application in the agricultural sector. This project utilizes image processing and machine learning techniques to analyze leaf images and determine whether the plant is healthy or diseased.
+## Introduction
+This project detects plant diseases by analyzing images of leaves. It utilizes OpenCV, NumPy, and Flask for backend processing, and Vue.js with Bootstrap for the frontend.
 
-## 2. Literature Survey
-Several approaches exist for plant disease detection, including traditional visual inspections, deep learning models, and image processing techniques. Our project focuses on using OpenCV and machine learning algorithms for analysis.
+## Literature Survey
+Plant diseases significantly impact agricultural productivity. Computer vision-based approaches help automate disease detection using image processing and machine learning techniques.
 
-## 3. Technical Requirements
+## Technical Requirements
 - Python 3.x
 - Flask
 - OpenCV
 - NumPy
-- skimage
 - Vue.js
 - Bootstrap
 
-## 4. Project Description
-The project involves uploading an image of a plant leaf, processing it using OpenCV, and determining its health status based on disease index calculations.
+## Project Description
+This system allows users to upload a leaf image, processes it using OpenCV, and determines if the plant is diseased based on detected features.
 
-## 5. System Design
-1. **Frontend**: Vue.js-based interface for image upload and displaying results.
-2. **Backend**: Flask API for processing images and returning results.
-3. **Processing**: OpenCV and NumPy for image processing.
+## System Design
+1. **Frontend:** Vue.js & Bootstrap-based UI for user interaction.
+2. **Backend:** Flask API processes the uploaded image and returns results.
+3. **Image Processing:** OpenCV detects diseased regions.
+4. **Output:** Displays disease status, affected area percentage, and an image preview.
 
-## 6. Source Code
+## How to Run the Project
 
-### Backend (Flask API)
+### 1. Clone the Repository
+```bash
+git clone https://github.com/your-repository/plant-disease-detection.git
+cd plant-disease-detection
+```
+
+### 2. Install Dependencies
+```bash
+pip install flask opencv-python numpy
+```
+
+### 3. Run the Flask Server
+```bash
+python app.py
+```
+The server will start at `http://127.0.0.1:5000`
+
+### 4. Open `index.html`
+Open the HTML file in a browser or use a local server to serve static files.
+
+## Source Code
+
+### Backend (`app.py`)
 ```python
 from flask import Flask, request, jsonify
 import cv2
 import numpy as np
-from skimage import filters
+import os
 
 app = Flask(__name__)
+UPLOAD_FOLDER = 'uploads/'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route('/upload', methods=['POST'])
-def process_image():
+def upload_file():
     file = request.files['image']
-    if not file:
-        return jsonify({'error': 'No file uploaded'})
+    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(filepath)
+    result = process_image(filepath)
+    return jsonify(result)
 
-    image = cv2.imdecode(np.fromstring(file.read(), np.uint8), cv2.IMREAD_COLOR)
+def process_image(image_path):
+    image = cv2.imread(image_path)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blurred, 50, 150)
-    ret, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    disease_index = np.mean(thresh) / 255.0
-    status = 'Diseased' if disease_index < 0.5 else 'Healthy'
-    affected_area_percentage = np.mean(thresh) * 100 / 255
-
-    return jsonify({
-        'affected_area_percentage': affected_area_percentage,
-        'disease_index': disease_index,
-        'num_diseased_regions': np.sum(edges > 0),
-        'status': status
-    })
+    _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    affected_area_percentage = np.mean(thresh) * 100 / 255.0
+    disease_index = 1 - (affected_area_percentage / 100.0)
+    status = 'Diseased' if disease_index > 0.5 else 'Healthy'
+    return {
+        "affected_area_percentage": affected_area_percentage,
+        "disease_index": disease_index,
+        "num_diseased_regions": 1,
+        "status": status
+    }
 
 if __name__ == '__main__':
     app.run(debug=True)
 ```
 
-### Frontend (Vue.js)
+### Frontend (`index.html`)
 ```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Plant Disease Detection</title>
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <meta charset="UTF-8">
+    <title>Plant Disease Detection</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
 </head>
 <body>
-  <div id="app" class="container mt-5">
-    <h1 class="mb-4">Plant Disease Detection</h1>
-    <form @submit.prevent="uploadImage">
-      <div class="form-group">
-        <label for="image">Upload a plant leaf image:</label>
-        <input type="file" class="form-control-file" id="image" @change="handleFileUpload">
-      </div>
-      <button type="submit" class="btn btn-primary">Detect Disease</button>
-    </form>
-    <div v-if="result" class="mt-4">
-      <h3>Result: {{ result.status }}
-        <span v-if="result.status === 'Diseased'">&#x1F621;</span>
-        <span v-else>&#x1F604;</span>
-      </h3>
-      <p><strong>Affected Area Percentage:</strong> {{ result.affected_area_percentage.toFixed(2) }}%</p>
-      <p><strong>Disease Index:</strong> {{ result.disease_index.toFixed(2) }}</p>
-      <p><strong>Number of Diseased Regions:</strong> {{ result.num_diseased_regions }}</p>
-      <img :src="imageUrl" alt="Uploaded image" class="img-thumbnail" v-if="imageUrl">
+    <div id="app" class="container mt-5">
+        <h1>Plant Disease Detection</h1>
+        <form @submit.prevent="uploadImage">
+            <input type="file" class="form-control-file" @change="handleFileUpload">
+            <button type="submit" class="btn btn-primary mt-2">Detect Disease</button>
+        </form>
+        <div v-if="result" class="mt-4">
+            <h3>Result: {{ result.status }} <span v-html="result.status === 'Diseased' ? '⚠️' : '✅'"></span></h3>
+            <p><strong>Affected Area:</strong> {{ result.affected_area_percentage }}%</p>
+            <p><strong>Disease Index:</strong> {{ result.disease_index }}</p>
+            <p><strong>Diseased Regions:</strong> {{ result.num_diseased_regions }}</p>
+            <img :src="imageUrl" class="img-thumbnail" v-if="imageUrl">
+        </div>
     </div>
-  </div>
-  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
-  <script src="/static/js/app.js"></script>
+
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
 ```
 
-### JavaScript (Vue.js Logic)
+### JavaScript (`app.js`)
 ```javascript
 new Vue({
-  el: '#app',
-  data: {
-    imageFile: null,
-    imageUrl: '',
-    result: null
-  },
-  methods: {
-    handleFileUpload(event) {
-      this.imageFile = event.target.files[0];
-      this.imageUrl = URL.createObjectURL(this.imageFile);
+    el: '#app',
+    data: {
+        image: null,
+        imageUrl: '',
+        result: null
     },
-    uploadImage() {
-      let formData = new FormData();
-      formData.append('image', this.imageFile);
-      fetch('/upload', { method: 'POST', body: formData })
-        .then(response => response.json())
-        .then(data => this.result = data)
-        .catch(error => console.error('Error:', error));
+    methods: {
+        handleFileUpload(event) {
+            this.image = event.target.files[0];
+            this.imageUrl = URL.createObjectURL(this.image);
+        },
+        uploadImage() {
+            let formData = new FormData();
+            formData.append('image', this.image);
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => { this.result = data; })
+            .catch(error => console.error('Error:', error));
+        }
     }
-  }
 });
 ```
 
-## 7. UI Design And Outputs
-- The user uploads an image.
-- The system processes the image and determines its status.
-- Results display affected area percentage, disease index, and diseased regions count.
-- A visual indicator (emoji) represents the status.
+## UI Design and Outputs
+- **Simple Bootstrap-based form** for file upload.
+- **Vue.js dynamic rendering** to show the results.
+- **Emoji indicator** for disease status.
 
-## 8. Benefits of Project
-- Helps farmers detect diseases early.
-- Reduces dependency on expert inspections.
-- Provides a cost-effective solution for monitoring plant health.
+## Benefits of the Project
+- Automated plant disease detection.
+- Reduces manual inspection effort.
+- Helps farmers and researchers in quick analysis.
 
-## 9. Conclusion
-This project demonstrates an image-processing-based approach to plant disease detection. Future improvements may include integrating deep learning models for more accurate predictions.
+## Conclusion
+This project provides a simple yet effective way to detect plant diseases using image processing techniques.
 
-## 10. Bibliography
-- OpenCV documentation: https://docs.opencv.org/
-- Vue.js documentation: https://vuejs.org/
-- Flask documentation: https://flask.palletsprojects.com/
-
-## Installation Instructions
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/plant-disease-detection.git
-   cd plant-disease-detection
-   ```
-2. Install dependencies:
-   ```bash
-   pip install flask opencv-python numpy scikit-image
-   ```
-3. Run the Flask server:
-   ```bash
-   python app.py
-   ```
-4. Open `index.html` in a browser to access the UI.
-
+## Bibliography
+- OpenCV Documentation
+- Vue.js Guide
+- Flask Documentation
